@@ -3,11 +3,12 @@
 
 using Azure.Core;
 using Azure.Identity;
-using Microsoft.Graph;
-using Microsoft.Graph.Models;
-using Microsoft.Graph.Me.SendMail;
 
-class GraphHelper
+using Microsoft.Graph;
+using Microsoft.Graph.Me.SendMail;
+using Microsoft.Graph.Models;
+
+partial class GraphHelper
 {
     // <UserAuthConfigSnippet>
     // Settings object
@@ -59,10 +60,9 @@ class GraphHelper
         _ = _userClient ??
             throw new System.NullReferenceException("Graph has not been initialized for user auth");
 
-        return _userClient.Me.GetAsync((config) =>
-        {
+        return _userClient.Me.GetAsync((config) => {
             // Only request specific properties
-            config.QueryParameters.Select = new[] {"displayName", "mail", "userPrincipalName" };
+            config.QueryParameters.Select = new[] { "displayName", "mail", "userPrincipalName" };
         });
     }
     // </GetUserSnippet>
@@ -78,8 +78,7 @@ class GraphHelper
             // Only messages from Inbox folder
             .MailFolders["Inbox"]
             .Messages
-            .GetAsync((config) =>
-            {
+            .GetAsync((config) => {
                 // Only request specific properties
                 config.QueryParameters.Select = new[] { "from", "isRead", "receivedDateTime", "subject" };
                 // Get at most 25 results
@@ -127,14 +126,66 @@ class GraphHelper
             });
     }
     // </SendMailSnippet>
+}
 
-    #pragma warning disable CS1998
+partial class GraphHelper
+{
+#pragma warning disable CS1998
     // <MakeGraphCallSnippet>
     // This function serves as a playground for testing Graph snippets
     // or other code
     public async static Task MakeGraphCallAsync()
     {
-        // INSERT YOUR CODE HERE
+        var mapper = new Dictionary<int, (string name, Action action)>();
+        mapper.Add(0, ("Exit", () => {
+            Console.WriteLine("Goodbye...");
+        }
+        ));
+        mapper.Add(1, ("OneDrive Root Children", async () => {
+            _ = _userClient ??
+                throw new System.NullReferenceException();
+            var driveItem = await _userClient.Me.Drive.GetAsync();
+            _ = driveItem ??
+              throw new System.NullReferenceException();
+
+            var userDriveId = driveItem.Id;
+            // List children in the drive
+            var driveRequest = _userClient.Drives[userDriveId];
+            var root = await driveRequest.Root.GetAsync();
+
+            var children = await driveRequest.Items[root.Id].Children.GetAsync();
+            foreach (var item in children.Value)
+            {
+                Console.WriteLine(item.Name);
+            }
+        }
+        ));
+        int choice = -1;
+
+        while (choice != 0)
+        {
+            Console.WriteLine("Please choose one of the following options:");
+            foreach (var item in mapper)
+            {
+                Console.WriteLine($"{item.Key}. {item.Value.name}");
+            }
+
+            // INSERT YOUR CODE HERE
+            try
+            {
+                choice = int.Parse(Console.ReadLine() ?? string.Empty);
+            }
+            catch (System.FormatException)
+            {
+                // Set to invalid value
+                choice = -1;
+            }
+
+            if (mapper.TryGetValue(choice, out var operation))
+            {
+                operation.action.Invoke();
+            }
+        }
     }
     // </MakeGraphCallSnippet>
 }
