@@ -8,6 +8,8 @@ using Microsoft.Graph;
 using Microsoft.Graph.Me.SendMail;
 using Microsoft.Graph.Models;
 
+using System.Text;
+
 partial class GraphHelper
 {
     // <UserAuthConfigSnippet>
@@ -137,10 +139,12 @@ partial class GraphHelper
     public async static Task MakeGraphCallAsync()
     {
         var mapper = new Dictionary<int, (string name, Action action)>();
+
         mapper.Add(0, ("Exit", () => {
             Console.WriteLine("Goodbye...");
         }
         ));
+
         mapper.Add(1, ("OneDrive Root Children", async () => {
             _ = _userClient ??
                 throw new System.NullReferenceException();
@@ -160,6 +164,24 @@ partial class GraphHelper
             }
         }
         ));
+
+        mapper.Add(2, ("OneDrive Root Upload", async () => {
+            _ = _userClient ??
+                throw new System.NullReferenceException();
+            var driveItem = await _userClient.Me.Drive.GetAsync();
+            _ = driveItem ??
+              throw new System.NullReferenceException();
+
+            var userDriveId = driveItem.Id;
+            // List children in the drive
+            var driveRequest = _userClient.Drives[userDriveId];
+            var root = await driveRequest.Root.GetAsync();
+
+            using var stream = new System.IO.MemoryStream(Encoding.UTF8.GetBytes(@"The contents of the file goes here."));
+            await driveRequest.Items[root.Id].ItemWithPath("test.txt").Content.PutAsync(stream);
+        }
+        ));
+
         int choice = -1;
 
         while (choice != 0)
