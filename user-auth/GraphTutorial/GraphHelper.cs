@@ -198,6 +198,32 @@ partial class GraphHelper
         }
         ));
 
+        mapper.Add(4, ("OneDrive Root Download", async () => {
+            _ = _userClient ??
+                throw new NullReferenceException();
+            var driveItem = await _userClient.Me.Drive.GetAsync();
+            _ = driveItem ??
+              throw new NullReferenceException();
+
+            var userDriveId = driveItem.Id;
+            // List children in the drive
+            var driveRequest = _userClient.Drives[userDriveId];
+            var root = await driveRequest.Root.GetAsync();
+
+
+            var task = driveRequest.Items[root.Id].ItemWithPath("test.txt").Content.GetAsync();
+
+            using var stream = await task;
+
+            _ = stream ??
+                throw new NullReferenceException();
+            using var streamWriter = new StreamWriter("test.txt");
+            await stream.CopyToAsync(streamWriter.BaseStream);
+            await Console.Out.WriteLineAsync("Download complete!");
+            System.Diagnostics.Process.Start("explorer.exe", Directory.GetCurrentDirectory());
+        }
+        ));
+
         int choice = -1;
 
         while (choice != 0)
