@@ -182,6 +182,22 @@ partial class GraphHelper
         }
         ));
 
+        mapper.Add(3, ("OneDrive Root Delete", async () => {
+            _ = _userClient ??
+                throw new System.NullReferenceException();
+            var driveItem = await _userClient.Me.Drive.GetAsync();
+            _ = driveItem ??
+              throw new System.NullReferenceException();
+
+            var userDriveId = driveItem.Id;
+            // List children in the drive
+            var driveRequest = _userClient.Drives[userDriveId];
+            var root = await driveRequest.Root.GetAsync();
+
+            await driveRequest.Items[root.Id].ItemWithPath("test.txt").DeleteAsync();
+        }
+        ));
+
         int choice = -1;
 
         while (choice != 0)
