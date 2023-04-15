@@ -5,6 +5,7 @@ using Azure.Core;
 using Azure.Identity;
 
 using Microsoft.Graph;
+using Microsoft.Graph.Drives.Item.Items.Item.CreateUploadSession;
 using Microsoft.Graph.Me.SendMail;
 using Microsoft.Graph.Models;
 
@@ -224,6 +225,64 @@ partial class GraphHelper
         }
         ));
 
+        mapper.Add(5, ("OneDrive Root Upload Large Files ", async () => {
+            _ = _userClient ??
+                throw new NullReferenceException();
+            var driveItem = await _userClient.Me.Drive.GetAsync();
+            _ = driveItem ??
+              throw new NullReferenceException();
+
+            var bytes = new byte[1024 * 1024 * 10];
+            var fileStream = new System.IO.MemoryStream(bytes);
+            var newBytes = Encoding.UTF8.GetBytes(@"The contents of the file goes here.");
+            fileStream.Write(newBytes, 0, newBytes.Length);
+
+            var userDriveId = driveItem.Id;
+            // List children in the drive
+            var driveRequest = _userClient.Drives[userDriveId];
+            var root = await driveRequest.Root.GetAsync();
+
+            // Use properties to specify the conflict behavior
+            // in this case, replace
+
+            var uploadSessionRequestBody = new CreateUploadSessionPostRequestBody
+            {
+                Item = new DriveItemUploadableProperties
+                {
+                    AdditionalData = new Dictionary<string, object>
+                    {
+                        { "@microsoft.graph.conflictBehavior", "replace" }
+                    }
+                }
+            };
+            var uploadSession = await driveRequest.Items[root.Id].ItemWithPath("TestSizeFile.txt").CreateUploadSession.PostAsync(uploadSessionRequestBody);
+
+
+            // Max slice size must be a multiple of 320 KiB
+            int maxSliceSize = 320 * 1024;
+            var fileUploadTask = new LargeFileUploadTask<DriveItem>(uploadSession, fileStream, maxSliceSize, _userClient.RequestAdapter);
+
+            var totalLength = fileStream.Length;
+            // Create a callback that is invoked after each slice is uploaded
+            IProgress<long> progress = new Progress<long>(prog => {
+                Console.WriteLine($"Uploaded {prog} bytes of {totalLength} bytes");
+            });
+
+            try
+            {
+                // Upload the file
+                var uploadResult = await fileUploadTask.UploadAsync(progress);
+
+                Console.WriteLine(uploadResult.UploadSucceeded ?
+                    $"Upload complete, item ID: {uploadResult.ItemResponse.Id}" :
+                    "Upload failed");
+            }
+            catch (ServiceException ex)
+            {
+                Console.WriteLine($"Error uploading: {ex.ToString()}");
+            }
+        }
+        ));
         int choice = -1;
 
         while (choice != 0)
