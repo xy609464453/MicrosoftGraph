@@ -5,11 +5,13 @@ using Azure.Core;
 using Azure.Identity;
 
 using Microsoft.Graph;
+using Microsoft.Graph.Drives.Item.Items.Item.CreateLink;
 using Microsoft.Graph.Drives.Item.Items.Item.CreateUploadSession;
 using Microsoft.Graph.Me.SendMail;
 using Microsoft.Graph.Models;
 
 using System.Text;
+using System.Text.Json.Serialization;
 
 partial class GraphHelper
 {
@@ -225,7 +227,7 @@ partial class GraphHelper
         }
         ));
 
-        mapper.Add(5, ("OneDrive Root Upload Large Files ", async () => {
+        mapper.Add(5, ("OneDrive Root Upload Large Files", async () => {
             _ = _userClient ??
                 throw new NullReferenceException();
             var driveItem = await _userClient.Me.Drive.GetAsync();
@@ -283,6 +285,43 @@ partial class GraphHelper
             }
         }
         ));
+
+        mapper.Add(6, ("OneDrive Create Link", async () => {
+            _ = _userClient ??
+                throw new NullReferenceException();
+            var driveItem = await _userClient.Me.Drive.GetAsync();
+            _ = driveItem ??
+              throw new NullReferenceException();
+
+            var bytes = new byte[1024 * 1024 * 10];
+            var fileStream = new System.IO.MemoryStream(bytes);
+            var newBytes = Encoding.UTF8.GetBytes(@"The contents of the file goes here.");
+            fileStream.Write(newBytes, 0, newBytes.Length);
+
+            var userDriveId = driveItem.Id;
+            // List children in the drive
+            var driveRequest = _userClient.Drives[userDriveId];
+            var root = await driveRequest.Root.GetAsync();
+
+            var type = "view";
+
+            var password = "ThisIsMyPrivatePassword";
+
+            var scope = "anonymous";
+
+            var link = driveRequest.Items[root.Id].ItemWithPath("TestSizeFile.txt").CreateLink;
+            var permission = await link.PostAsync(new CreateLinkPostRequestBody
+            {
+                Type = type,
+                Scope = scope,
+                Password = password,
+            });
+            
+            Console.WriteLine("Link created successfully");
+            Console.WriteLine(permission.Link.WebUrl);
+        }
+        ));
+
         int choice = -1;
 
         while (choice != 0)
