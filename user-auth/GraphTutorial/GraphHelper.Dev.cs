@@ -21,8 +21,7 @@ partial class GraphHelper
         ));
 
         mapper.Add(1, ("OneDrive Root Children", async () => {
-            _ = _userClient ??
-                throw new System.NullReferenceException();
+            _ = _userClient ?? throw new System.NullReferenceException();
             var driveItem = await _userClient.Me.Drive.GetAsync();
             _ = driveItem ??
               throw new System.NullReferenceException();
@@ -32,7 +31,12 @@ partial class GraphHelper
             var driveRequest = _userClient.Drives[userDriveId];
             var root = await driveRequest.Root.GetAsync();
 
+            _ = root ?? throw new System.NullReferenceException();
+
             var children = await driveRequest.Items[root.Id].Children.GetAsync();
+
+            _ = (children?.Value) ?? throw new System.NullReferenceException();
+
             foreach (var item in children.Value)
             {
                 Console.WriteLine(item.Name);
@@ -51,8 +55,11 @@ partial class GraphHelper
             // List children in the drive
             var driveRequest = _userClient.Drives[userDriveId];
             var root = await driveRequest.Root.GetAsync();
+            _ = root ?? throw new System.NullReferenceException();
 
             using var stream = new System.IO.MemoryStream(Encoding.UTF8.GetBytes(@"The contents of the file goes here."));
+
+
             await driveRequest.Items[root.Id].ItemWithPath("test.txt").Content.PutAsync(stream);
         }
         ));
@@ -68,6 +75,7 @@ partial class GraphHelper
             // List children in the drive
             var driveRequest = _userClient.Drives[userDriveId];
             var root = await driveRequest.Root.GetAsync();
+            _ = root ?? throw new System.NullReferenceException();
 
             await driveRequest.Items[root.Id].ItemWithPath("test.txt").DeleteAsync();
         }
@@ -84,7 +92,7 @@ partial class GraphHelper
             // List children in the drive
             var driveRequest = _userClient.Drives[userDriveId];
             var root = await driveRequest.Root.GetAsync();
-
+            _ = root ?? throw new System.NullReferenceException();
 
             var task = driveRequest.Items[root.Id].ItemWithPath("test.txt").Content.GetAsync();
 
@@ -115,6 +123,7 @@ partial class GraphHelper
             // List children in the drive
             var driveRequest = _userClient.Drives[userDriveId];
             var root = await driveRequest.Root.GetAsync();
+            _ = root ?? throw new System.NullReferenceException();
 
             // Use properties to specify the conflict behavior
             // in this case, replace
@@ -174,6 +183,7 @@ partial class GraphHelper
             // List children in the drive
             var driveRequest = _userClient.Drives[userDriveId];
             var root = await driveRequest.Root.GetAsync();
+            _ = root ?? throw new System.NullReferenceException();
 
             var type = "view";
 
@@ -190,7 +200,7 @@ partial class GraphHelper
             });
 
             Console.WriteLine("Link created successfully");
-            Console.WriteLine(permission.Link.WebUrl);
+            Console.WriteLine(permission?.Link?.WebUrl);
         }
         ));
 
